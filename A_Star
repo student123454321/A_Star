@@ -1,0 +1,168 @@
+class Wierzcholek():
+    def __init__(self, rodzic=None, pozycja=None):
+        self.rodzic = rodzic
+        self.pozycja = pozycja
+        self.g = 0
+        self.h = 0
+        self.f = 0
+
+    def __eq__(self, other):
+        return self.pozycja == other.pozycja
+
+class A_Star():
+    def __init__(self, grid):
+        self.grid = grid
+        self.start = 0
+        self.koniec = 0
+        self.szukaj_start()
+        self.szukaj_koniec()
+
+    def szukaj_start(self):
+        for x, wiersz in enumerate(self.grid):
+            for y, kolumna in enumerate(wiersz):
+                if kolumna == 'S':
+                    self.start = (x,y)
+                    return self.start
+
+    def szukaj_koniec(self):
+        for x, wiersz in enumerate(self.grid):
+            for y, kolumna in enumerate(wiersz):
+                if kolumna == 'K':
+                    self.koniec = (x, y)
+                    return self.koniec
+
+    def szukaj_droge(self):  
+        pozycja_start = Wierzcholek(None, self.start)
+        pozycja_koncowa = Wierzcholek(None, self.koniec)
+
+        otwarta_lista = []
+        zamknieta_lista = []
+
+        otwarta_lista.append(pozycja_start)
+
+        obecny_wierzcholek = otwarta_lista[0]
+        obecny_index = 0
+
+        while otwarta_lista:
+            najmniejsze_f = self.szukaj_najmniejsze_f(otwarta_lista)
+            obecny_index = najmniejsze_f[0]
+            obecny_wierzcholek = najmniejsze_f[1]
+
+            if obecny_wierzcholek == pozycja_koncowa:
+                track = []
+                obecny = obecny_wierzcholek
+                while obecny is not None:
+                    track.append(obecny.pozycja)
+                    obecny = obecny.rodzic
+                return track[::-1]
+
+            otwarta_lista.pop(obecny_index)
+            zamknieta_lista.append(obecny_wierzcholek)
+
+            koledzy = self.szukaj_kolegow(obecny_wierzcholek, pozycja_koncowa, otwarta_lista, zamknieta_lista)
+            for pozycja in koledzy:
+                otwarta_lista.append(pozycja)
+
+    def szukaj_kolegow(self, obecny_wierzcholek, pozycja_koncowa, otwarta_lista, zamknieta_lista):
+        koledzy = []
+        grid_dl = len(self.grid)
+
+        for kierunek_pozycja in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+            nowa_pozycja = (obecny_wierzcholek.pozycja[0] + kierunek_pozycja[0], obecny_wierzcholek.pozycja[1] + kierunek_pozycja[1])
+
+            if nowa_pozycja[0] < 0 or nowa_pozycja[0] > (grid_dl -1) or nowa_pozycja[1] < 0 or nowa_pozycja[1] > (len(self.grid[grid_dl-1]) -1):
+                continue
+
+            if self.grid[nowa_pozycja[0]][nowa_pozycja[1]] != 'O':
+                if self.grid[nowa_pozycja[0]][nowa_pozycja[1]] != 'S':
+                    if self.grid[nowa_pozycja[0]][nowa_pozycja[1]] != 'K':
+                        continue
+
+            nowy_wierzcholek = Wierzcholek(obecny_wierzcholek, nowa_pozycja)
+
+            pomoc1 = False
+
+            for istniejeWzamknietej in zamknieta_lista:
+                if nowy_wierzcholek == istniejeWzamknietej:
+                    pomoc1 = True
+            if pomoc1:
+                continue
+
+            pomoc2 = False
+
+            for istniejeWotwartej in otwarta_lista:
+                if nowy_wierzcholek == istniejeWotwartej:
+                    istniejeWotwartej.g += 1
+                    pomoc2 = True
+            if pomoc2:
+                continue
+
+            nowy_wierzcholek.g = obecny_wierzcholek.g + 1
+            nowy_wierzcholek.h = abs(pozycja_koncowa.pozycja[0] - nowy_wierzcholek.pozycja[0]) + abs(pozycja_koncowa.pozycja[1] - nowy_wierzcholek.pozycja[1])
+            nowy_wierzcholek.f = nowy_wierzcholek.g + nowy_wierzcholek.h
+
+            koledzy.append(nowy_wierzcholek)
+
+        return koledzy
+
+    def szukaj_najmniejsze_f(self, otwarta_lista):
+        pozycja_index = 0
+        f = float("inf")
+        pozycja = 0
+
+        for index, element in enumerate(otwarta_lista):
+            if element.f < f:
+                f = element.f
+                pozycja = element
+                pozycja_index = index
+
+        return (pozycja_index, pozycja)
+
+
+
+def main():
+    grid = [['S', 'O', '|', 'O', 'O', 'O', 'O', 'O', '|', 'O'],
+            ['O', 'O', '|', 'O', '|', 'O', 'O', 'O', '|', 'K'],
+            ['O', 'O', 'O', 'O', '|', 'O', '|', 'O', '|', 'O'],
+            ['O', 'O', 'O', 'O', '|', 'O', '|', 'O', '|', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', '|', 'O', '|', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', '|', 'O', 'O', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', '|', 'O', 'O', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', '|', 'O', 'O', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O'],
+            ['O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O', 'O']]
+
+    a_star = A_Star(grid)
+    way = a_star.szukaj_droge()
+
+    if way:
+        for x, wiersz in enumerate(grid):
+            for y, kolumna in enumerate(wiersz):
+                for element in way:
+                    if element[0] == x and element[1] == y:
+                        if grid[x][y] != 'S' and grid[x][y] != 'K':
+                            grid[x][y] = '-'
+
+        for wiersz in grid:
+            linijka = ""
+            for kolumna in wiersz:
+                if kolumna == '-':
+                    linijka += "\033[92m[" + kolumna + "]\033[0m"
+
+                elif kolumna == 'S':
+                    linijka += "\033[93m[" + kolumna + "]\033[0m"
+
+                elif kolumna == 'K':
+                    linijka += "\033[94m[" + kolumna + "]\033[0m"
+
+                elif kolumna == '|':
+                    linijka += "\033[91m[" + kolumna + "]\033[0m"
+
+                else:
+                    linijka += "[" + kolumna + "]"
+            print(linijka)
+    else:
+        print('Nie ma drogi do celu')
+
+if __name__ == '__main__':
+    main()
